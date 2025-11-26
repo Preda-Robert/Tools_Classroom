@@ -1,0 +1,6 @@
+@SmartClass.API_HostAddress = http://localhost:5027
+
+GET {{SmartClass.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

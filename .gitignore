@@ -1,0 +1,23 @@
+# ----- .NET -----
+bin/
+obj/
+*.user
+*.suo
+*.cache/
+*.log
+*.db
+
+# EF Core Migrations backups
+*.dll
+*.pdb
+
+# ----- Angular -----
+node_modules/
+dist/
+.angular/
+npm-debug.log
+yarn-error.log
+
+# ----- Environment Files -----
+.env
+*.env
