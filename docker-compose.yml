@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: smartclass-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - smartclass-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend/SmartClass.API
+      dockerfile: Dockerfile
+    container_name: smartclass-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=SmartClassDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - JwtSettings__Secret=YourSuperSecretKeyForJWTTokenGeneration123456789
+      - JwtSettings__Issuer=SmartClassAPI
+      - JwtSettings__Audience=SmartClassClient
+      - JwtSettings__ExpiryMinutes=60
+    ports:
+      - "5000:5000"
+    depends_on:
+      - sqlserver
+    networks:
+      - smartclass-network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartclass-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - smartclass-network
+    environment:
+      - API_URL=http://backend:5000
+
+volumes:
+  sqlserver-data:
+
+networks:
+  smartclass-network:
+    driver: bridge
