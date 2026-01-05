@@ -11,14 +11,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Angular app
-RUN npm run build
+# Build the Angular app for production
+RUN npm run build -- --configuration=production
 
 # Production stage
 FROM nginx:alpine
 
 # Copy built assets from build stage
-COPY --from=build /app/dist/smartclass-frontend /usr/share/nginx/html
+# Angular 18+ uses 'browser' output directory
+COPY --from=build /app/dist/smartclass-frontend/browser /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

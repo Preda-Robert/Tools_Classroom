@@ -28,6 +28,36 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(50);
         });
 
+        var teacherId = Guid.NewGuid();
+    var studentId = Guid.NewGuid();
+
+    var teacherPasswordHash = BCrypt.Net.BCrypt.HashPassword("Teacher123!");
+        var studentPasswordHash = BCrypt.Net.BCrypt.HashPassword("Student123!");
+
+        modelBuilder.Entity<User>().HasData(
+            new User
+            {
+                Id = 1,
+                FirstName = "Default",
+                LastName = "Teacher",
+                Email = "teacher@example.com",
+                PasswordHash = teacherPasswordHash,
+                Role = UserRole.Teacher,
+                CreatedAt = DateTime.UtcNow
+            },
+            new User
+            {
+                Id = 2,
+                FirstName = "Default",
+                LastName = "Student",
+                Email = "student@example.com",
+                PasswordHash = studentPasswordHash,
+                Role = UserRole.Student,
+                CreatedAt = DateTime.UtcNow
+            }
+        );
+
+
         // Class configuration
         modelBuilder.Entity<Class>(entity =>
         {

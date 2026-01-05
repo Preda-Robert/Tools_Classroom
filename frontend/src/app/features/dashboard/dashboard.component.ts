@@ -6,6 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { ClassService } from '../../core/services/class.service';
 import { Class } from '../../core/models/class.model';
@@ -23,6 +26,9 @@ import { User } from '../../core/models/user.model';
     MatIconModule,
     MatToolbarModule,
     MatDialogModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatTooltipModule,
   ],
   template: `
     <mat-toolbar color="primary">
@@ -44,10 +50,18 @@ import { User } from '../../core/models/user.model';
           <button mat-raised-button color="accent" (click)="openJoinClass()" *ngIf="!isTeacher">
             <mat-icon>login</mat-icon> Join Class
           </button>
+          <button mat-icon-button (click)="loadClasses()" matTooltip="Refresh">
+            <mat-icon>refresh</mat-icon>
+          </button>
         </div>
       </div>
 
-      <div class="classes-grid">
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner></mat-spinner>
+        <p>Loading classes...</p>
+      </div>
+
+      <div *ngIf="!isLoading" class="classes-grid">
         <mat-card *ngFor="let class of classes" class="class-card" (click)="openClass(class.id)">
           <mat-card-header>
             <mat-card-title>{{ class.name }}</mat-card-title>
@@ -93,6 +107,15 @@ import { User } from '../../core/models/user.model';
       .actions {
         display: flex;
         gap: 12px;
+        align-items: center;
+      }
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        gap: 20px;
       }
       .classes-grid {
         display: grid;
@@ -101,7 +124,7 @@ import { User } from '../../core/models/user.model';
       }
       .class-card {
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
       }
       .class-card:hover {
         transform: translateY(-4px);
@@ -143,12 +166,14 @@ export class DashboardComponent implements OnInit {
   classes: Class[] = [];
   currentUser: User | null = null;
   isTeacher = false;
+  isLoading = false;
 
   constructor(
     private authService: AuthService,
     private classService: ClassService,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -158,9 +183,18 @@ export class DashboardComponent implements OnInit {
   }
 
   loadClasses(): void {
+    this.isLoading = true;
     this.classService.getMyClasses().subscribe({
-      next: (classes) => (this.classes = classes),
-      error: (error) => console.error('Error loading classes:', error),
+      next: (classes) => {
+        this.classes = classes;
+        this.isLoading = false;
+        console.log('Loaded classes:', classes);
+      },
+      error: (error) => {
+        console.error('Error loading classes:', error);
+        this.isLoading = false;
+        this.snackBar.open('Failed to load classes', 'Close', { duration: 3000 });
+      },
     });
   }
 
@@ -171,10 +205,13 @@ export class DashboardComponent implements OnInit {
   openCreateClass(): void {
     const dialogRef = this.dialog.open(CreateClassDialogComponent, {
       width: '500px',
+      disableClose: false,
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
+      console.log('Create class dialog closed with result:', result);
+      if (result === true) {
+        // Reload classes immediately
         this.loadClasses();
       }
     });
@@ -183,10 +220,13 @@ export class DashboardComponent implements OnInit {
   openJoinClass(): void {
     const dialogRef = this.dialog.open(JoinClassDialogComponent, {
       width: '400px',
+      disableClose: false,
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
+      console.log('Join class dialog closed with result:', result);
+      if (result === true) {
+        // Reload classes immediately
         this.loadClasses();
       }
     });

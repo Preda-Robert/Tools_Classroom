@@ -22,11 +22,9 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto?> RegisterAsync(RegisterDto dto)
     {
-        // Check if user already exists
         if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
             return null;
 
-        // Hash password (in production, use BCrypt or Identity)
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
         var user = new User

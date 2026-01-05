@@ -77,8 +77,48 @@ var app = builder.Build();
 // Apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        var db = services.GetRequiredService<ApplicationDbContext>();
+        
+        logger.LogInformation("Applying database migrations...");
+        
+        // Wait for SQL Server to be ready
+        var retryCount = 0;
+        var maxRetries = 10;
+        
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                db.Database.Migrate();
+                logger.LogInformation("Database migrations applied successfully");
+                break;
+            }
+            catch (Exception ex)
+            {
+                retryCount++;
+                logger.LogWarning($"Migration attempt {retryCount} failed: {ex.Message}");
+                
+                if (retryCount >= maxRetries)
+                {
+                    logger.LogError(ex, "Failed to apply migrations after {MaxRetries} attempts", maxRetries);
+                    throw;
+                }
+                
+                logger.LogInformation("Waiting 5 seconds before retry...");
+                Thread.Sleep(5000);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database");
+        throw;
+    }
 }
 
 if (app.Environment.IsDevelopment())

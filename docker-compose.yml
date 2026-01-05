@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-  # SQL Server Database
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: smartclass-db
@@ -16,7 +15,6 @@ services:
     networks:
       - smartclass-network
 
-  # Backend API
   backend:
     build:
       context: ./backend/SmartClass.API
@@ -39,7 +37,6 @@ services:
     volumes:
       - ./backend/uploads:/app/uploads
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
