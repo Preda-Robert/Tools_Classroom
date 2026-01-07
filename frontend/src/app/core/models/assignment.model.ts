@@ -7,3 +7,10 @@ export interface Assignment {
   maxPoints: number;
   createdAt: Date;
 }
+
+export interface CreateAssignmentRequest {
+  title: string;
+  description: string;
+  dueDate: Date;
+  maxPoints: number;
+}

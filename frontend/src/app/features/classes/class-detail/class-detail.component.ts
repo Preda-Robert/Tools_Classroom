@@ -1,4 +1,3 @@
-// frontend/src/app/features/classes/class-detail/class-detail.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,18 +9,22 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTableModule } from '@angular/material/table';
 import { ClassService } from '../../../core/services/class.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AssignmentService } from '../../../core/services/assignment.service';
 import { Class } from '../../../core/models/class.model';
+import { Assignment } from '../../../core/models/assignment.model';
+import { CreateAssignmentDialogComponent } from '../../assignments/create-assignment/create-assignment-dialog.component';
 
 @Component({
   selector: 'app-delete-confirm-dialog',
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatButtonModule],
   template: `
-    <h2 mat-dialog-title>Delete Class?</h2>
+    <h2 mat-dialog-title>Delete {{ type }}?</h2>
     <mat-dialog-content>
-      <p>Are you sure you want to delete this class?</p>
+      <p>Are you sure you want to delete this {{ type }}? This action cannot be undone.</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
@@ -29,7 +32,9 @@ import { Class } from '../../../core/models/class.model';
     </mat-dialog-actions>
   `,
 })
-export class DeleteConfirmDialogComponent {}
+export class DeleteConfirmDialogComponent {
+  type = 'item';
+}
 
 @Component({
   selector: 'app-class-detail',
@@ -44,6 +49,7 @@ export class DeleteConfirmDialogComponent {}
     MatSnackBarModule,
     MatMenuModule,
     MatDialogModule,
+    MatTableModule,
   ],
   template: `
     <mat-toolbar color="primary">
@@ -52,7 +58,7 @@ export class DeleteConfirmDialogComponent {}
       </button>
       <span>{{ classInfo?.name || 'Loading...' }}</span>
       <span class="spacer"></span>
-      
+
       <button mat-icon-button [matMenuTriggerFor]="menu" *ngIf="isTeacher">
         <mat-icon>more_vert</mat-icon>
       </button>
@@ -107,221 +113,236 @@ export class DeleteConfirmDialogComponent {}
         <mat-card>
           <mat-card-content>
             <mat-icon class="stat-icon">assignment</mat-icon>
-            <h2>3</h2>
+            <h2>{{ assignments.length }}</h2>
             <p>Assignments</p>
           </mat-card-content>
         </mat-card>
 
         <mat-card>
           <mat-card-content>
-            <mat-icon class="stat-icon">emoji_events</mat-icon>
-            <h2>{{ isTeacher ? '85%' : '1250' }}</h2>
-            <p>{{ isTeacher ? 'Class Average' : 'Your Points' }}</p>
+            <mat-icon class="stat-icon">people</mat-icon>
+            <h2>{{ classInfo.studentCount }}</h2>
+            <p>Students</p>
           </mat-card-content>
         </mat-card>
 
         <mat-card>
           <mat-card-content>
             <mat-icon class="stat-icon">campaign</mat-icon>
-            <h2>2</h2>
+            <h2>0</h2>
             <p>Announcements</p>
           </mat-card-content>
         </mat-card>
 
         <mat-card>
           <mat-card-content>
-            <mat-icon class="stat-icon">trending_up</mat-icon>
-            <h2>78%</h2>
-            <p>Progress</p>
+            <mat-icon class="stat-icon">calendar_today</mat-icon>
+            <h2>{{ classInfo.createdAt | date : 'MMM d' }}</h2>
+            <p>Created</p>
           </mat-card-content>
         </mat-card>
       </div>
 
-      <!-- Recent Activity -->
-      <mat-card class="activity-card">
+      <!-- Assignments Section -->
+      <mat-card class="assignments-card">
         <mat-card-header>
-          <mat-card-title>Recent Activity</mat-card-title>
+          <mat-card-title>
+            <div class="section-header">
+              <span>Assignments</span>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="createAssignment()"
+                *ngIf="isTeacher"
+              >
+                <mat-icon>add</mat-icon>
+                Create Assignment
+              </button>
+            </div>
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <div class="activity-item">
+          <div *ngIf="assignments.length === 0" class="empty-state">
             <mat-icon>assignment</mat-icon>
-            <div>
-              <strong>New Assignment Posted</strong>
-              <p>Mathematics Homework #5</p>
-              <small>2 days ago</small>
-            </div>
+            <h3>No assignments yet</h3>
+            <p *ngIf="isTeacher">Create your first assignment to get started!</p>
           </div>
-          <div class="activity-item">
-            <mat-icon>campaign</mat-icon>
-            <div>
-              <strong>Announcement</strong>
-              <p>Welcome to the class!</p>
-              <small>5 days ago</small>
-            </div>
+
+          <div class="assignments-list" *ngIf="assignments.length > 0">
+            <mat-card *ngFor="let assignment of assignments" class="assignment-card">
+              <mat-card-header>
+                <mat-card-title>{{ assignment.title }}</mat-card-title>
+                <mat-card-subtitle>
+                  Due: {{ assignment.dueDate | date : 'MMM d, y' }} • {{ assignment.maxPoints }}
+                  points
+                </mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>{{ assignment.description }}</p>
+              </mat-card-content>
+              <mat-card-actions *ngIf="isTeacher">
+                <button mat-button color="warn" (click)="deleteAssignment(assignment)">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              </mat-card-actions>
+            </mat-card>
           </div>
         </mat-card-content>
       </mat-card>
-
-      <!-- Action Buttons -->
-      <div class="actions">
-        <button mat-raised-button color="primary">
-          <mat-icon>assignment</mat-icon>
-          View Assignments
-        </button>
-        <button mat-raised-button color="accent" *ngIf="!isTeacher">
-          <mat-icon>psychology</mat-icon>
-          AI Study Assistant
-        </button>
-        <button mat-raised-button *ngIf="isTeacher">
-          <mat-icon>add</mat-icon>
-          Create Assignment
-        </button>
-      </div>
     </div>
   `,
-  styles: [`
-    .spacer {
-      flex: 1 1 auto;
-    }
-    .delete-item {
-      color: #f44336;
-    }
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 400px;
-      color: #999;
-    }
-    .loading-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      margin-bottom: 16px;
-      animation: spin 2s linear infinite;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .class-detail-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    .header-card {
-      margin-bottom: 24px;
-    }
-    .header-card h1 {
-      margin: 0;
-      font-size: 2em;
-    }
-    .class-meta {
-      margin-top: 16px;
-    }
-    .clickable {
-      cursor: pointer;
-    }
-    .clickable:hover {
-      background-color: rgba(0, 0, 0, 0.08);
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .stats-grid mat-card {
-      text-align: center;
-    }
-    .stat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: #667eea;
-      margin-bottom: 8px;
-    }
-    .stats-grid h2 {
-      margin: 8px 0;
-      font-size: 2em;
-      color: #667eea;
-    }
-    .stats-grid p {
-      margin: 0;
-      color: #666;
-    }
-    .activity-card {
-      margin-bottom: 24px;
-    }
-    .activity-item {
-      display: flex;
-      gap: 16px;
-      padding: 16px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .activity-item:last-child {
-      border-bottom: none;
-    }
-    .activity-item mat-icon {
-      color: #667eea;
-    }
-    .activity-item strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-    .activity-item p {
-      margin: 0 0 4px 0;
-      color: #666;
-    }
-    .activity-item small {
-      color: #999;
-    }
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .actions button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-  `]
+  styles: [
+    `
+      .spacer {
+        flex: 1 1 auto;
+      }
+      .delete-item {
+        color: #f44336;
+      }
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: #999;
+      }
+      .loading-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        animation: spin 2s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .class-detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .header-card {
+        margin-bottom: 24px;
+      }
+      .header-card h1 {
+        margin: 0;
+        font-size: 2em;
+      }
+      .class-meta {
+        margin-top: 16px;
+      }
+      .clickable {
+        cursor: pointer;
+      }
+      .clickable:hover {
+        background-color: rgba(0, 0, 0, 0.08);
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stats-grid mat-card {
+        text-align: center;
+      }
+      .stat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        color: #667eea;
+        margin-bottom: 8px;
+      }
+      .stats-grid h2 {
+        margin: 8px 0;
+        font-size: 2em;
+        color: #667eea;
+      }
+      .stats-grid p {
+        margin: 0;
+        color: #666;
+      }
+      .assignments-card {
+        margin-bottom: 24px;
+      }
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .assignments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .assignment-card {
+        background: #f5f5f5;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+      .empty-state mat-icon {
+        font-size: 72px;
+        width: 72px;
+        height: 72px;
+        color: #ddd;
+      }
+    `,
+  ],
 })
 export class ClassDetailComponent implements OnInit {
   classId!: number;
   classInfo: Class | null = null;
   isTeacher = false;
+  assignments: Assignment[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private classService: ClassService,
+    private assignmentService: AssignmentService,
     private authService: AuthService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    console.log('ClassDetailComponent initialized');
-    const currentUser = this.authService.getCurrentUser();
-    this.isTeacher = currentUser?.role === 'Teacher';
+    this.isTeacher = this.authService.getCurrentUser()?.role === 'Teacher';
     this.classId = Number(this.route.snapshot.paramMap.get('id'));
-    console.log('Loading class with ID:', this.classId);
     this.loadClassInfo();
+    this.loadAssignments();
   }
 
   loadClassInfo(): void {
     this.classService.getClassById(this.classId).subscribe({
       next: (classInfo) => {
-        console.log('Class loaded successfully:', classInfo);
         this.classInfo = classInfo;
       },
       error: (error) => {
         console.error('Error loading class:', error);
         this.snackBar.open('Failed to load class', 'Close', { duration: 3000 });
-        setTimeout(() => this.goBack(), 1000);
+        this.goBack();
+      },
+    });
+  }
+
+  loadAssignments(): void {
+    this.assignmentService.getClassAssignments(this.classId).subscribe({
+      next: (assignments) => {
+        this.assignments = assignments;
+      },
+      error: (error) => {
+        console.error('Error loading assignments:', error);
       },
     });
   }
@@ -345,10 +366,53 @@ export class ClassDetailComponent implements OnInit {
     }
   }
 
+  createAssignment(): void {
+    const dialogRef = this.dialog.open(CreateAssignmentDialogComponent, {
+      width: '600px',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.assignmentService.createAssignment(this.classId, result).subscribe({
+          next: () => {
+            this.snackBar.open('Assignment created!', 'Close', { duration: 3000 });
+            this.loadAssignments();
+          },
+          error: (error) => {
+            console.error('Error creating assignment:', error);
+            this.snackBar.open('Failed to create assignment', 'Close', { duration: 3000 });
+          },
+        });
+      }
+    });
+  }
+
+  deleteAssignment(assignment: Assignment): void {
+    const dialogRef = this.dialog.open(DeleteConfirmDialogComponent, {
+      width: '400px',
+    });
+    dialogRef.componentInstance.type = 'assignment';
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.assignmentService.deleteAssignment(this.classId, assignment.id).subscribe({
+          next: () => {
+            this.snackBar.open('Assignment deleted', 'Close', { duration: 3000 });
+            this.loadAssignments();
+          },
+          error: () => {
+            this.snackBar.open('Failed to delete assignment', 'Close', { duration: 3000 });
+          },
+        });
+      }
+    });
+  }
+
   deleteClass(): void {
     const dialogRef = this.dialog.open(DeleteConfirmDialogComponent, {
       width: '400px',
     });
+    dialogRef.componentInstance.type = 'class';
 
     dialogRef.afterClosed().subscribe((confirmed) => {
       if (confirmed && this.classInfo) {
