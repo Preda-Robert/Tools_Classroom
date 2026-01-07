@@ -176,11 +176,13 @@ export class DashboardComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
-  ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
-    this.isTeacher = this.currentUser?.role === 'Teacher';
-    this.loadClasses();
-  }
+ngOnInit(): void {
+  console.log('Dashboard initialized');
+  this.currentUser = this.authService.getCurrentUser();
+  this.isTeacher = this.currentUser?.role === 'Teacher';
+  console.log('Current user:', this.currentUser);
+  this.loadClasses();
+}
 
   loadClasses(): void {
     this.isLoading = true;
