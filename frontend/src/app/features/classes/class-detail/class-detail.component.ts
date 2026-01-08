@@ -16,6 +16,7 @@ import { AssignmentService } from '../../../core/services/assignment.service';
 import { Class } from '../../../core/models/class.model';
 import { Assignment } from '../../../core/models/assignment.model';
 import { CreateAssignmentDialogComponent } from '../../assignments/create-assignment/create-assignment-dialog.component';
+import { AssignmentDetailDialogComponent } from '../../assignments/assignment-detail/assignment-detail-dialog.component';
 import { ChangeDetectorRef } from '@angular/core';
 
 
@@ -171,7 +172,11 @@ export class DeleteConfirmDialogComponent {
           </div>
 
           <div class="assignments-list" *ngIf="assignments.length > 0">
-            <mat-card *ngFor="let assignment of assignments" class="assignment-card">
+            <mat-card
+              *ngFor="let assignment of assignments"
+              class="assignment-card clickable"
+              (click)="viewAssignment(assignment)"
+            >
               <mat-card-header>
                 <mat-card-title>{{ assignment.title }}</mat-card-title>
                 <mat-card-subtitle>
@@ -180,10 +185,22 @@ export class DeleteConfirmDialogComponent {
                 </mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
-                <p>{{ assignment.description }}</p>
+                <p class="assignment-description">{{ assignment.description }}</p>
               </mat-card-content>
               <mat-card-actions *ngIf="isTeacher">
-                <button mat-button color="warn" (click)="deleteAssignment(assignment)">
+                <button
+                  mat-button
+                  color="primary"
+                  (click)="viewAssignment(assignment); $event.stopPropagation()"
+                >
+                  <mat-icon>visibility</mat-icon>
+                  View Details
+                </button>
+                <button
+                  mat-button
+                  color="warn"
+                  (click)="deleteAssignment(assignment); $event.stopPropagation()"
+                >
                   <mat-icon>delete</mat-icon>
                   Delete
                 </button>
@@ -287,6 +304,20 @@ export class DeleteConfirmDialogComponent {
       }
       .assignment-card {
         background: #f5f5f5;
+        transition: all 0.2s ease;
+      }
+      .assignment-card:hover {
+        background: #eeeeee;
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .assignment-description {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        margin: 0;
       }
       .empty-state {
         text-align: center;
@@ -309,16 +340,15 @@ export class ClassDetailComponent implements OnInit {
   assignments: Assignment[] = [];
 
   constructor(
-  private route: ActivatedRoute,
-  private router: Router,
-  private classService: ClassService,
-  private assignmentService: AssignmentService,
-  private authService: AuthService,
-  private snackBar: MatSnackBar,
-  private dialog: MatDialog,
-  private cdr: ChangeDetectorRef  
-) {}
-
+    private route: ActivatedRoute,
+    private router: Router,
+    private classService: ClassService,
+    private assignmentService: AssignmentService,
+    private authService: AuthService,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.isTeacher = this.authService.getCurrentUser()?.role === 'Teacher';
@@ -331,8 +361,7 @@ export class ClassDetailComponent implements OnInit {
     this.classService.getClassById(this.classId).subscribe({
       next: (classInfo) => {
         this.classInfo = classInfo;
-              this.cdr.markForCheck(); 
-
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading class:', error);
@@ -346,7 +375,7 @@ export class ClassDetailComponent implements OnInit {
     this.assignmentService.getClassAssignments(this.classId).subscribe({
       next: (assignments) => {
         this.assignments = assignments;
-              this.cdr.markForCheck();  
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading assignments:', error);
@@ -371,6 +400,18 @@ export class ClassDetailComponent implements OnInit {
       navigator.clipboard.writeText(message);
       this.snackBar.open('Share message copied!', 'Close', { duration: 3000 });
     }
+  }
+
+  viewAssignment(assignment: Assignment): void {
+    this.dialog.open(AssignmentDetailDialogComponent, {
+      width: '700px',
+      maxWidth: '90vw',
+      data: {
+        assignment: assignment,
+        isTeacher: this.isTeacher,
+        classStudentCount: this.classInfo?.studentCount || 0,
+      },
+    });
   }
 
   createAssignment(): void {
