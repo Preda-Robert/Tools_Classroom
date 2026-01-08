@@ -15,6 +15,8 @@ import { Class } from '../../core/models/class.model';
 import { CreateClassDialogComponent } from '../classes/create-class/create-class-dialog.component';
 import { JoinClassDialogComponent } from '../classes/join-class/join-class-dialog.component';
 import { User } from '../../core/models/user.model';
+import { ChangeDetectorRef } from '@angular/core';
+
 
 @Component({
   selector: 'app-dashboard',
@@ -173,7 +175,8 @@ export class DashboardComponent implements OnInit {
     private classService: ClassService,
     private router: Router,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef   
   ) {}
 
 ngOnInit(): void {
@@ -190,6 +193,7 @@ ngOnInit(): void {
       next: (classes) => {
         this.classes = classes;
         this.isLoading = false;
+        this.cdr.markForCheck();
         console.log('Loaded classes:', classes);
       },
       error: (error) => {

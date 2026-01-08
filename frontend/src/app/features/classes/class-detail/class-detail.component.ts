@@ -16,6 +16,8 @@ import { AssignmentService } from '../../../core/services/assignment.service';
 import { Class } from '../../../core/models/class.model';
 import { Assignment } from '../../../core/models/assignment.model';
 import { CreateAssignmentDialogComponent } from '../../assignments/create-assignment/create-assignment-dialog.component';
+import { ChangeDetectorRef } from '@angular/core';
+
 
 @Component({
   selector: 'app-delete-confirm-dialog',
@@ -307,14 +309,16 @@ export class ClassDetailComponent implements OnInit {
   assignments: Assignment[] = [];
 
   constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private classService: ClassService,
-    private assignmentService: AssignmentService,
-    private authService: AuthService,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog
-  ) {}
+  private route: ActivatedRoute,
+  private router: Router,
+  private classService: ClassService,
+  private assignmentService: AssignmentService,
+  private authService: AuthService,
+  private snackBar: MatSnackBar,
+  private dialog: MatDialog,
+  private cdr: ChangeDetectorRef  
+) {}
+
 
   ngOnInit(): void {
     this.isTeacher = this.authService.getCurrentUser()?.role === 'Teacher';
@@ -327,6 +331,8 @@ export class ClassDetailComponent implements OnInit {
     this.classService.getClassById(this.classId).subscribe({
       next: (classInfo) => {
         this.classInfo = classInfo;
+              this.cdr.markForCheck(); 
+
       },
       error: (error) => {
         console.error('Error loading class:', error);
@@ -340,6 +346,7 @@ export class ClassDetailComponent implements OnInit {
     this.assignmentService.getClassAssignments(this.classId).subscribe({
       next: (assignments) => {
         this.assignments = assignments;
+              this.cdr.markForCheck();  
       },
       error: (error) => {
         console.error('Error loading assignments:', error);
