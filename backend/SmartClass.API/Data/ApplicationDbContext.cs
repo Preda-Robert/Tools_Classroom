@@ -1,3 +1,4 @@
+// backend/SmartClass.API/Data/ApplicationDbContext.cs
 namespace SmartClass.API.Data;
 
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Assignment> Assignments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
+    public DbSet<Quiz> Quizzes { get; set; }
+    public DbSet<QuizQuestion> QuizQuestions { get; set; }
+    public DbSet<QuizSubmission> QuizSubmissions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,10 +32,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(50);
         });
 
-        var teacherId = Guid.NewGuid();
-    var studentId = Guid.NewGuid();
-
-    var teacherPasswordHash = BCrypt.Net.BCrypt.HashPassword("Teacher123!");
+        var teacherPasswordHash = BCrypt.Net.BCrypt.HashPassword("Teacher123!");
         var studentPasswordHash = BCrypt.Net.BCrypt.HashPassword("Student123!");
 
         modelBuilder.Entity<User>().HasData(
@@ -56,7 +57,6 @@ public class ApplicationDbContext : DbContext
                 CreatedAt = DateTime.UtcNow
             }
         );
-
 
         // Class configuration
         modelBuilder.Entity<Class>(entity =>
@@ -131,6 +131,48 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.Creator)
                   .WithMany()
                   .HasForeignKey(e => e.CreatedBy)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Quiz configuration
+        modelBuilder.Entity<Quiz>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            
+            entity.HasOne(e => e.Class)
+                  .WithMany(c => c.Quizzes)
+                  .HasForeignKey(e => e.ClassId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // QuizQuestion configuration
+        modelBuilder.Entity<QuizQuestion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.QuestionText).IsRequired();
+            entity.Property(e => e.OptionsJson).IsRequired();
+            
+            entity.HasOne(e => e.Quiz)
+                  .WithMany(q => q.Questions)
+                  .HasForeignKey(e => e.QuizId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // QuizSubmission configuration
+        modelBuilder.Entity<QuizSubmission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AnswersJson).IsRequired();
+            
+            entity.HasOne(e => e.Quiz)
+                  .WithMany(q => q.Submissions)
+                  .HasForeignKey(e => e.QuizId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.Student)
+                  .WithMany()
+                  .HasForeignKey(e => e.StudentId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
     }

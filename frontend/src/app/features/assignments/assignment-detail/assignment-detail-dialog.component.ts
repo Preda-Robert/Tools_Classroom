@@ -1,5 +1,5 @@
 // frontend/src/app/features/assignments/assignment-detail/assignment-detail-dialog.component.ts
-import { Component, Inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,12 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { Assignment } from '../../../core/models/assignment.model';
+
+interface DialogData {
+  assignment: Assignment;
+  isTeacher: boolean;
+  classStudentCount: number;
+}
 
 @Component({
   selector: 'app-assignment-detail-dialog',
@@ -270,15 +276,8 @@ import { Assignment } from '../../../core/models/assignment.model';
   ],
 })
 export class AssignmentDetailDialogComponent {
-  constructor(
-    @Inject(MAT_DIALOG_DATA)
-    public data: {
-      assignment: Assignment;
-      isTeacher: boolean;
-      classStudentCount: number;
-    },
-    private dialogRef: MatDialogRef<AssignmentDetailDialogComponent>
-  ) {}
+  data: DialogData = inject(MAT_DIALOG_DATA);
+  dialogRef = inject(MatDialogRef<AssignmentDetailDialogComponent>);
 
   getTimeRemaining(): string {
     const now = new Date();

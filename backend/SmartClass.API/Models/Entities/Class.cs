@@ -1,3 +1,4 @@
+// backend/SmartClass.API/Models/Entities/Class.cs
 namespace SmartClass.API.Models.Entities;
 
 public class Class
@@ -15,4 +16,5 @@ public class Class
     public ICollection<ClassEnrollment> Enrollments { get; set; } = new List<ClassEnrollment>();
     public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
     public ICollection<Announcement> Announcements { get; set; } = new List<Announcement>();
+    public ICollection<Quiz> Quizzes { get; set; } = new List<Quiz>();
 }
