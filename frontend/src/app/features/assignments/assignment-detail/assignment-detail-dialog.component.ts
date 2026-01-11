@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -136,7 +136,13 @@ interface DialogData {
       <!-- Teacher View -->
       <div *ngIf="data.isTeacher" class="submissions-section">
         <h3>Student Submissions</h3>
-        <mat-card class="info-card">
+        
+        <div *ngIf="isLoadingSubmission" class="loading-box">
+          <mat-spinner diameter="30"></mat-spinner>
+          <span>Loading submissions...</span>
+        </div>
+        
+        <mat-card class="info-card" *ngIf="!isLoadingSubmission">
           <mat-card-content>
             <div class="status-info">
               <mat-icon class="info-icon">assignment</mat-icon>
@@ -466,6 +472,7 @@ export class AssignmentDetailDialogComponent implements OnInit {
   private submissionService = inject(SubmissionService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   mySubmission: Submission | null = null;
   submissionsCount = 0;
@@ -485,24 +492,34 @@ export class AssignmentDetailDialogComponent implements OnInit {
       next: (submission) => {
         this.mySubmission = submission;
         this.isLoadingSubmission = false;
+        this.cdr.markForCheck();
       },
       error: (error) => {
         // 404 is expected if no submission exists
+        this.mySubmission = null;
+        this.isLoadingSubmission = false;
         if (error.status !== 404) {
           console.error('Error loading submission:', error);
+          this.snackBar.open('Failed to load submission', 'Close', { duration: 3000 });
         }
-        this.isLoadingSubmission = false;
+        this.cdr.markForCheck();
       },
     });
   }
 
   loadSubmissionsCount(): void {
+    this.isLoadingSubmission = true;
     this.submissionService.getAssignmentSubmissions(this.data.assignment.id).subscribe({
       next: (submissions) => {
         this.submissionsCount = submissions.length;
+        this.isLoadingSubmission = false;
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading submissions count:', error);
+        this.snackBar.open('Failed to load submissions', 'Close', { duration: 3000 });
+        this.isLoadingSubmission = false;
+        this.cdr.markForCheck();
       },
     });
   }

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -270,6 +270,7 @@ export class ViewSubmissionsDialogComponent implements OnInit {
   private submissionService = inject(SubmissionService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   submissions: Submission[] = [];
   isLoading = true;
@@ -285,15 +286,19 @@ export class ViewSubmissionsDialogComponent implements OnInit {
 
   loadSubmissions(): void {
     this.isLoading = true;
+    this.cdr.markForCheck();
+    
     this.submissionService.getAssignmentSubmissions(this.data.assignment.id).subscribe({
       next: (submissions) => {
         this.submissions = submissions;
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading submissions:', error);
         this.snackBar.open('Failed to load submissions', 'Close', { duration: 3000 });
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
