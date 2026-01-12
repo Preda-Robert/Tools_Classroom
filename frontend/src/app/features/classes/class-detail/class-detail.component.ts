@@ -15,7 +15,7 @@ import { ClassService } from '../../../core/services/class.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AssignmentService } from '../../../core/services/assignment.service';
 import { AnnouncementService } from '../../../core/services/announcement.service';
-import { QuizService } from '../../../core/services/quiz.service';
+import { QuizService, QuizSubmission } from '../../../core/services/quiz.service';
 import { Class } from '../../../core/models/class.model';
 import { Assignment } from '../../../core/models/assignment.model';
 import { Announcement } from '../../../core/models/announcement.model';
@@ -24,6 +24,9 @@ import { CreateAssignmentDialogComponent } from '../../assignments/create-assign
 import { AssignmentDetailDialogComponent } from '../../assignments/assignment-detail/assignment-detail-dialog.component';
 import { CreateAnnouncementDialogComponent } from '../../announcements/create-announcement/create-announcement-dialog.component';
 import { CreateQuizDialogComponent } from '../../quizzes/create-quiz/create-quiz-dialog.component';
+import { TakeQuizDialogComponent } from '../../quizzes/take-quiz/take-quiz-dialog.component';
+import { QuizResultsDialogComponent } from '../../quizzes/quiz-results/quiz-results-dialog.component';
+import { ViewQuizSubmissionsDialogComponent } from '../../quizzes/view-quiz-submissions/view-quiz-submissions-dialog.component';
 import { ChangeDetectorRef } from '@angular/core';
 
 @Component({
@@ -230,7 +233,7 @@ export class DeleteConfirmDialogComponent {
                   </mat-card>
 
                   <!-- Quiz Item -->
-                  <mat-card *ngIf="item.type === 'quiz'" class="quiz-card-feed clickable">
+                  <mat-card *ngIf="item.type === 'quiz'" class="quiz-card-feed">
                     <mat-card-header>
                       <div class="item-icon quiz-icon">
                         <mat-icon>quiz</mat-icon>
@@ -251,8 +254,43 @@ export class DeleteConfirmDialogComponent {
                         </span>
                       </div>
                     </mat-card-content>
-                    <mat-card-actions *ngIf="isTeacher">
-                      <button mat-button color="warn" (click)="deleteQuiz(item.data); $event.stopPropagation()">
+                    <mat-card-actions>
+                      <!-- Student Actions -->
+                      <button 
+                        mat-raised-button 
+                        color="primary" 
+                        *ngIf="!isTeacher && !hasSubmittedQuiz(item.data.id)"
+                        (click)="startQuiz(item.data)"
+                      >
+                        <mat-icon>play_arrow</mat-icon>
+                        Start Quiz
+                      </button>
+                      <button 
+                        mat-raised-button 
+                        color="accent" 
+                        *ngIf="!isTeacher && hasSubmittedQuiz(item.data.id)"
+                        (click)="viewQuizResults(item.data)"
+                      >
+                        <mat-icon>assessment</mat-icon>
+                        View Results
+                      </button>
+                      
+                      <!-- Teacher Actions -->
+                      <button 
+                        mat-button 
+                        color="primary" 
+                        *ngIf="isTeacher"
+                        (click)="viewQuizSubmissions(item.data)"
+                      >
+                        <mat-icon>people</mat-icon>
+                        View Submissions
+                      </button>
+                      <button 
+                        mat-button 
+                        color="warn" 
+                        *ngIf="isTeacher" 
+                        (click)="deleteQuiz(item.data)"
+                      >
                         <mat-icon>delete</mat-icon>
                         Delete
                       </button>
@@ -341,11 +379,54 @@ export class DeleteConfirmDialogComponent {
                         <mat-icon>schedule</mat-icon>{{ quiz.timeLimit }} min
                       </span>
                     </div>
+                    
+                    <!-- Show submission status for students -->
+                    <div *ngIf="!isTeacher && hasSubmittedQuiz(quiz.id)" class="quiz-status">
+                      <mat-chip class="submitted-chip">
+                        <mat-icon>check_circle</mat-icon>
+                        Completed - Score: {{ getQuizSubmission(quiz.id)?.score }} / {{ quiz.maxPoints }}
+                      </mat-chip>
+                    </div>
                   </mat-card-content>
                   <mat-card-actions>
-                    <button mat-button color="primary" disabled>
+                    <!-- Student Actions -->
+                    <button 
+                      mat-raised-button 
+                      color="primary" 
+                      *ngIf="!isTeacher && !hasSubmittedQuiz(quiz.id)"
+                      (click)="startQuiz(quiz)"
+                    >
                       <mat-icon>play_arrow</mat-icon>
-                      Start Quiz (Coming Soon)
+                      Start Quiz
+                    </button>
+                    <button 
+                      mat-raised-button 
+                      color="accent" 
+                      *ngIf="!isTeacher && hasSubmittedQuiz(quiz.id)"
+                      (click)="viewQuizResults(quiz)"
+                    >
+                      <mat-icon>assessment</mat-icon>
+                      View Results
+                    </button>
+                    
+                    <!-- Teacher Actions -->
+                    <button 
+                      mat-raised-button 
+                      color="primary" 
+                      *ngIf="isTeacher"
+                      (click)="viewQuizSubmissions(quiz)"
+                    >
+                      <mat-icon>people</mat-icon>
+                      View Submissions
+                    </button>
+                    <button 
+                      mat-button 
+                      color="warn" 
+                      *ngIf="isTeacher"
+                      (click)="deleteQuiz(quiz)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                      Delete
                     </button>
                   </mat-card-actions>
                 </mat-card>
@@ -496,8 +577,7 @@ export class DeleteConfirmDialogComponent {
       .quiz-card-feed:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
-      .assignment-card-feed:hover,
-      .quiz-card-feed:hover {
+      .assignment-card-feed:hover {
         transform: translateX(4px);
       }
       .announcement-content {
@@ -527,6 +607,21 @@ export class DeleteConfirmDialogComponent {
       }
       .quiz-meta mat-icon,
       .quiz-stats mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+      .quiz-status {
+        margin-top: 12px;
+      }
+      .submitted-chip {
+        background: #4caf50 !important;
+        color: white !important;
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+      }
+      .submitted-chip mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
@@ -575,6 +670,7 @@ export class ClassDetailComponent implements OnInit {
   announcements: Announcement[] = [];
   quizzes: Quiz[] = [];
   feedItems: Array<{ type: string; data: any; date: Date }> = [];
+  private quizSubmissions: Map<number, QuizSubmission> = new Map();
 
   constructor(
     private route: ActivatedRoute,
@@ -647,6 +743,7 @@ export class ClassDetailComponent implements OnInit {
       next: (quizzes) => {
         this.quizzes = quizzes;
         this.updateFeed();
+        this.loadQuizSubmissions();
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -655,12 +752,100 @@ export class ClassDetailComponent implements OnInit {
     });
   }
 
+  loadQuizSubmissions(): void {
+    if (!this.isTeacher) {
+      this.quizzes.forEach(quiz => {
+        this.quizService.getMyQuizSubmission(this.classId, quiz.id).subscribe({
+          next: (submission) => {
+            this.quizSubmissions.set(quiz.id, submission);
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            // 404 is expected if not submitted
+          }
+        });
+      });
+    }
+  }
+
   updateFeed(): void {
     this.feedItems = [
       ...this.announcements.map((a) => ({ type: 'announcement', data: a, date: new Date(a.createdAt) })),
       ...this.assignments.map((a) => ({ type: 'assignment', data: a, date: new Date(a.createdAt) })),
       ...this.quizzes.map((q) => ({ type: 'quiz', data: q, date: new Date(q.createdAt) })),
     ].sort((a, b) => b.date.getTime() - a.date.getTime());
+  }
+
+  hasSubmittedQuiz(quizId: number): boolean {
+    return this.quizSubmissions.has(quizId);
+  }
+
+  getQuizSubmission(quizId: number): QuizSubmission | undefined {
+    return this.quizSubmissions.get(quizId);
+  }
+
+  startQuiz(quiz: Quiz): void {
+    // Check if already submitted
+    if (this.hasSubmittedQuiz(quiz.id)) {
+      this.viewQuizResults(quiz);
+      return;
+    }
+
+    const dialogRef = this.dialog.open(TakeQuizDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      disableClose: true,
+      data: {
+        quiz: quiz,
+        classId: this.classId,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.quizService.submitQuiz(this.classId, quiz.id, result).subscribe({
+          next: (submission) => {
+            this.quizSubmissions.set(quiz.id, submission);
+            this.snackBar.open('Quiz submitted successfully!', 'Close', { duration: 3000 });
+            this.viewQuizResults(quiz);
+            this.cdr.markForCheck();
+          },
+          error: (error) => {
+            console.error('Error submitting quiz:', error);
+            this.snackBar.open('Failed to submit quiz', 'Close', { duration: 3000 });
+          },
+        });
+      }
+    });
+  }
+
+  viewQuizResults(quiz: Quiz): void {
+    const submission = this.getQuizSubmission(quiz.id);
+    if (!submission) {
+      this.snackBar.open('No submission found', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.dialog.open(QuizResultsDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      data: {
+        quiz: quiz,
+        submission: submission,
+      },
+    });
+  }
+
+  viewQuizSubmissions(quiz: Quiz): void {
+    this.dialog.open(ViewQuizSubmissionsDialogComponent, {
+      width: '1000px',
+      maxWidth: '95vw',
+      data: {
+        quiz: quiz,
+        classId: this.classId,
+        classStudentCount: this.classInfo?.studentCount || 0,
+      },
+    });
   }
 
   goBack(): void {
